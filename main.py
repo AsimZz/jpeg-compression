@@ -1,4 +1,3 @@
-import argparse
 import numpy as np
 import itertools
 from cv2 import cv2 as cv
@@ -128,8 +127,8 @@ def chroma_subsampling(img_arr):
 
 
 # a method to Discrete Cosine Transform using dct method from scipy.fftpack library
-def dct2d(yuv_gray_img):
-    return dct(dct(yuv_gray_img.T, norm='ortho').T, norm='ortho')
+def dct2d(yuv_img):
+    return dct(dct(yuv_img.T, norm='ortho').T, norm='ortho')
 
 
 def chunks(img_arr, size):
@@ -158,14 +157,14 @@ def jpeg_compression_logic(img_arr):
     dct_blocks = [dct2d(img_block) for img_block in img_blocks]
 
     # quantize all the DCT coefficients using the quantization matrix and the scaling factor
-    reduced_dct_coeffs = [np.round(dct_block / (jpeg_quantiz_matrix_1))
+    reduced_dct_coeffs = [np.round(dct_block / (jpeg_quantiz_matrix_4))
                           for dct_block in dct_blocks]
     # and get the original coefficients back
-    reduced_dct_coeffs = [reduced_dct_coeff * (jpeg_quantiz_matrix_1)
+    reduced_dct_coeffs = [reduced_dct_coeff * (jpeg_quantiz_matrix_4)
                           for reduced_dct_coeff in reduced_dct_coeffs]
 
     # applying the IDCT of every block
-    rec_img_blocks = [cv.idct(coeff_block)
+    rec_img_blocks = [idct2d(coeff_block)
                       for coeff_block in reduced_dct_coeffs]
 
     # reshape the reconstructed image blocks
@@ -179,12 +178,8 @@ def jpeg_compression_logic(img_arr):
     return rec_img
 
 
-def quantization(dct_coeff):
-    print('')
-
-
-def idct2d(a):
-    return idct(idct(a.T, norm='ortho').T, norm='ortho')
+def idct2d(yuv_img):
+    return idct(idct(yuv_img.T, norm='ortho').T, norm='ortho')
 
 
 def conv_ycbcr_to_rgb(img_arr):
@@ -217,7 +212,7 @@ for channel_num in range(3):
     rec_img[:, :, channel_num] = mono_image
 
 # 5 finally I just convert the image back to RGB and display it
-rec_img_rgb = cv.cvtColor(rec_img, code=cv.COLOR_YCR_CB2BGR)
+rec_img_rgb = conv_ycbcr_to_rgb(rec_img)
 rec_img_rgb[rec_img_rgb < 0] = 0
 rec_img_rgb[rec_img_rgb > 255] = 255
 rec_img_rgb = np.uint8(rec_img_rgb)
