@@ -1,6 +1,5 @@
 import numpy as np
 import itertools
-from cv2 import cv2 as cv
 from PIL import Image as img
 from scipy.fftpack import dct, idct
 import utils
