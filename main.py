@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 from PIL import Image as img
+import cv2 as cv
 from scipy.fftpack import dct, idct
 import utils
 
@@ -51,7 +52,7 @@ def chunks(img_arr, size):
         yield img_arr[i:i + size]
 
 
-def jpeg_compression_logic(img_arr):
+def jpeg_compression_logic(img_arr, num_coeffs=None):
     # prevent against multiple-channel images
     if len(img_arr.shape) != 2:
         raise ValueError('Input image must be a single channel 2D array')
@@ -66,18 +67,25 @@ def jpeg_compression_logic(img_arr):
     # split into 8 x 8 pixels blocks
     img_blocks = [img_arr[j:j + 8, i:i + 8]
                   for (j, i) in itertools.product(range(0, height, 8),
-                                                  range(0, width, 8))]  # DCT transform every 8x8 block
+                                                  range(0, width, 8))]
 
+    # DCT transform every 8x8 block
     dct_blocks = [dct2d(img_block) for img_block in img_blocks]
 
-    # quantize all the DCT coefficients using the quantization matrix and the scaling factor
-    reduced_dct_coeffs = [np.round(dct_block / (utils.jpeg_quantiz_matrix_1))
-                          for dct_block in dct_blocks]
-    # and get the original coefficients back
-    reduced_dct_coeffs = [reduced_dct_coeff * (utils.jpeg_quantiz_matrix_1)
-                          for reduced_dct_coeff in reduced_dct_coeffs]
+    if num_coeffs is not None:
+        # keep only the first K DCT coefficients of every block
+        reduced_dct_coeffs = [utils.zig_zag(
+            dct_block, num_coeffs) for dct_block in dct_blocks]
+    else:
+        # quantize all the DCT coefficients using the quantization matrix and the scaling factor
+        reduced_dct_coeffs = [np.round(dct_block / (utils.jpeg_quantiz_matrix_2))
+                              for dct_block in dct_blocks]
 
-    # applying the IDCT of every block
+        # and get the original coefficients back
+        reduced_dct_coeffs = [reduced_dct_coeff * (utils.jpeg_quantiz_matrix_2)
+                              for reduced_dct_coeff in reduced_dct_coeffs]
+
+    # IDCT of every block
     rec_img_blocks = [idct2d(coeff_block)
                       for coeff_block in reduced_dct_coeffs]
 
@@ -94,7 +102,7 @@ def jpeg_compression_logic(img_arr):
 
 # HERE I applied the JPEG Compression Algorithm
 # 1 we imported the image first from the image folder
-image = img.open('images/selena_gomez_photo.jpg')
+image = img.open('images/hozier.jpg')
 # 2 then I convert the image to YCbCr color model
 img_yuv = conv_rgb_to_ycbcr(np.array(image))
 # 3 now we implement the chroma subsampling technique
@@ -113,7 +121,8 @@ for channel_num in range(3):
     rec_img[:, :, channel_num] = mono_image
 
 # 5 finally I just convert the image back to RGB and display it
-rec_img_rgb = conv_ycbcr_to_rgb(rec_img)
+rec_img_rgb = cv.cvtColor(rec_img, code=cv.COLOR_YCrCb2BGR)
+#rec_img_rgb = conv_ycbcr_to_rgb(rec_img)
 rec_img_rgb[rec_img_rgb < 0] = 0
 rec_img_rgb[rec_img_rgb > 255] = 255
 rec_img_rgb = np.uint8(rec_img_rgb)
