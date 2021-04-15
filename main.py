@@ -100,6 +100,14 @@ def jpeg_compression_logic(img_arr, num_coeffs=None):
     return rec_img
 
 
+def getImageName(img_location):
+    filename = img_location.split('/')[-1]
+    filename = filename.split('.')
+    filename[0] += "_result_image"
+    filename = '.'.join(filename)
+    return filename
+
+
 # HERE I applied the JPEG Compression Algorithm
 # 1 we imported the image first from the image folder
 image = img.open('images/hozier.jpg')
@@ -127,5 +135,5 @@ rec_img_rgb[rec_img_rgb < 0] = 0
 rec_img_rgb[rec_img_rgb > 255] = 255
 rec_img_rgb = np.uint8(rec_img_rgb)
 final_image = img.fromarray(rec_img_rgb)
-final_image.save('selena_gomez_result_image.jpg')
+final_image.save(getImageName(image.filename))
 final_image.show()
